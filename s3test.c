@@ -17,6 +17,8 @@
 #define NS_DELIM '.'
 
 #include "s3.h"
+#include "s3_secret.h"
+
 /*
  * Example code that signs a request for listing the bucket's contents
  * Should trans even need to touch S3? Probably does.
@@ -465,7 +467,7 @@ s3_get(struct S3 *s3, const char *bucket, const char *key) {
 int main (int argc, char **argv) {
 	struct S3 *s3; 
 	
-	s3 = s3_init("REDACTED", "REDACTED", "s3.amazonaws.com");
+	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com");
 	const char *bucket = "REDACTED";
 	
 	s3_list_bucket(s3, bucket);
