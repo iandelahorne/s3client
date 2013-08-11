@@ -345,79 +345,20 @@ libxml_do_stuff(char *str) {
 
 
 
-static void
-s3_list_bucket(struct S3 *s3, const char *bucket) {
+char *
+s3_make_date() {
 	char *date;
-	char *data, *digest;
-	char *hdr;
 	time_t now;
 	struct tm tm;
-	
-	char *url;
-	
-	CURL *curl;
-	struct curl_slist *headers = NULL;
-	struct s3_string *str;
-	const char *method = "GET";
 
-
-	str = s3_string_init();		
 	date = malloc(128);
 	now = time(0);
 	tm = *gmtime(&now);
 	strftime(date, 128, "%a, %d %b %Y %H:%M:%S %Z", &tm);
 
-	data = malloc(1024);
-	snprintf(data, 1023, "%s\n\n\n%s\n/%s/", method, date, bucket);	
-	fprintf(stderr, "data is %s\n", data);
+	return date;
 
-	digest = hmac_sign(s3->secret, data, strlen(data));
-	fprintf(stderr, "Authentication: AWS %s:%s\n", s3->id, digest);
-	
-	asprintf(&url, "http://%s.%s/?delimiter=/", bucket, s3->base_url);
-	fprintf(stderr, "url is %s\n", url);
-
-	curl = curl_easy_init();
-	
-	hdr = malloc(1024);
-
-	snprintf(hdr, 1023, "Date: %s", date);
-	headers = curl_slist_append(headers, hdr);
-
-	snprintf(hdr, 1023, "Authorization: AWS %s:%s", s3->id, digest);
-	headers = curl_slist_append(headers, hdr);
-
-	free(hdr);
-	
-	
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-/*	curl_easy_setopt(curl, CURLOPT_HEADER, 1); */
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-	/* http://stackoverflow.com/questions/2329571/c-libcurl-get-output-into-a-string */
-
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s3_string_curl_writefunc);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, str);
-
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-#if 0
-	curl_easy_setopt(curl, CURLOPT_PROXY, "http://localhost:8080");
-#endif
-	curl_easy_perform(curl);
-
-	curl_easy_cleanup(curl);
-	curl_slist_free_all(headers);
-
-	libxml_do_stuff(str->ptr);	
-	printf("%s\n", str->ptr);
-	s3_string_free(str);
-	free(data);
-	free(date);
-	free(digest);	
 }
-
 /* Add return values later */
 void
 s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *sign_data, const char *date, struct s3_string *str) {
@@ -469,20 +410,32 @@ s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *si
 	free(digest);	
 }
 
-char *
-s3_make_date() {
+static void
+s3_list_bucket(struct S3 *s3, const char *bucket) {
 	char *date;
-	time_t now;
-	struct tm tm;
+	char *sign_data;	
+	char *url;
+	struct s3_string *str;
+	const char *method = "GET";
 
-	date = malloc(128);
-	now = time(0);
-	tm = *gmtime(&now);
-	strftime(date, 128, "%a, %d %b %Y %H:%M:%S %Z", &tm);
 
-	return date;
+	str = s3_string_init();		
+	date = s3_make_date();
 
+	asprintf(&sign_data, "%s\n\n\n%s\n/%s/", method, date, bucket);	
+      	asprintf(&url, "http://%s.%s/?delimiter=/", bucket, s3->base_url);
+
+	s3_perform_op(s3, method, url, sign_data, date, str);
+
+	libxml_do_stuff(str->ptr);	
+	printf("%s\n", str->ptr);
+
+	s3_string_free(str);
+	free(sign_data);
+	free(date);
 }
+
+
 static void
 s3_get(struct S3 *s3, const char *bucket, const char *key) {
 	const char *method = "GET";
@@ -514,7 +467,7 @@ int main (int argc, char **argv) {
 	s3 = s3_init("REDACTED", "REDACTED", "s3.amazonaws.com");
 	const char *bucket = "REDACTED";
 	
-	/* s3_list_bucket(s3, bucket); */
+	s3_list_bucket(s3, bucket);
 	
 	s3_get(s3, bucket, "Towel-Dog.jpg");
 
