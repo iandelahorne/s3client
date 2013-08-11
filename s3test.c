@@ -452,7 +452,7 @@ s3_get(struct S3 *s3, const char *bucket, const char *key) {
 	str = s3_string_init();		
 	
 	s3_perform_op(s3, method, url, sign_data, date, str);
-	printf("%d\n", str->len);
+	printf("%ld\n", str->len);
 	
 	s3_string_free(str);
 
