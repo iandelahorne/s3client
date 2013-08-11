@@ -305,6 +305,7 @@ walk_xpath_nodes(xmlNodeSetPtr nodes) {
 			
 			/* Push this onto a list of contents, return list */
 			struct s3_content *content = parse_content(cur->children);
+			printf("Content parsed for key %s\n", content->key);
 		}
 	}
 }
