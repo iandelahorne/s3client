@@ -178,6 +178,25 @@ hmac_sign(const char *key, const char *str, size_t len) {
 	return buf;
 }
 
+static unsigned char *
+md5_sum(const char *content, size_t len) {
+
+	const EVP_MD *md = EVP_md5();
+	unsigned char *md_value;
+	EVP_MD_CTX *ctx;
+	unsigned int md_len;
+	
+	md_value = malloc(EVP_MAX_MD_SIZE);
+	
+	ctx = EVP_MD_CTX_create();
+	EVP_DigestInit_ex(ctx, md, NULL);
+	EVP_DigestUpdate(ctx, content, len);
+	EVP_DigestFinal_ex(ctx, md_value, &md_len);
+	
+	EVP_MD_CTX_destroy(ctx);
+
+	return md_value;
+}
 
 static struct S3 *
 s3_init(const char *id, const char *secret, const char *base_url) {
