@@ -19,14 +19,6 @@
 #include "s3.h"
 #include "s3_secret.h"
 
-/*
- * Example code that signs a request for listing the bucket's contents
- * Should trans even need to touch S3? Probably does.
- * Can we upload directly to S3 from PHP? From the form?
- * Why shouldn't we upload directly to S3 from PHP or form?
- * 
- */
-
 struct s3_content {
 	char *key;
 	char *lastmod; /* time_t */
