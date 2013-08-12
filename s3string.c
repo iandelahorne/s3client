@@ -18,11 +18,24 @@ s3_string_curl_writefunc(void *ptr, size_t len, size_t nmemb, struct s3_string *
 	return len*nmemb;
 }
 
+size_t
+s3_string_curl_readfunc(void *ptr, size_t len, size_t nmemb, struct s3_string *s) {
+	size_t left = s->len - s->uploaded;
+	size_t max_chunk = len * nmemb;
+	size_t retcode = left < max_chunk ? left : max_chunk;
+	
+	memcpy(ptr, s->ptr + s->uploaded, retcode); 
+	
+	s->uploaded += retcode;  // <-- save progress
+	return retcode;
+}
+
 struct s3_string *
 s3_string_init() {
 	struct s3_string *s;
 	s = malloc(sizeof (struct s3_string));
 	s->len = 0;
+	s->uploaded = 0;
 	s->ptr = malloc(s->len+1);
 	if (s->ptr == NULL) {
 		fprintf(stderr, "malloc() failed\n");
