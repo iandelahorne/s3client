@@ -8,13 +8,11 @@
 
 #include <curl/curl.h>
 
-#include <expat.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 
-#define NS_DELIM '.'
 
 #include "s3.h"
 #include "s3_secret.h"
@@ -38,92 +36,6 @@ struct S3 {
 	char *base_url;
 };
 
-# if 0
-
-static void XMLCALL
-s3_start_tag(void *user_data, const XML_Char *name, const XML_Char **attrs) {
-	char *tagns = NULL;
-	struct s3_xml_data *data = user_data;
-	const char *nsdelim = strrchr(name, NS_DELIM);
-	int i;	
-	/* char kbuf[1024]; */
-
-	if (nsdelim) {
-		tagns = strndup(name, nsdelim - name);
-		name = nsdelim + 1;
-	}
-	for (i = 0; i < data->level; i++) 
-		fprintf(stderr, "\t");	
-	data->level += 1;
-	
-	fprintf(stderr, "<%s>\n", name);
-	if (strcmp(name, "Contents") == 0) {
-		fprintf(stderr, "Starting new Contents\n");
-	}
-/*
-	for (; *attrs; attrs += 2) {
-		char *v;
-		int vsz;
-		
-		nsdelim = strchr(*attrs, NS_DELIM);
-		if (nsdelim || !tagns)
-			snprintf(kbuf, sizeof (kbuf), "attr.%s", *attrs);
-		else
-			snprintf(kbuf, sizeof (kbuf), "attr.%s.%s", tagns, *attrs);
-		
-		vsz = strlen(*(attrs + 1)) * 2 + 1;
-		v = malloc(vsz);
-		strlcpy(v, *(attrs + 1), vsz);
-		for (i = 0; i < data->level; i++) 
-			fprintf(stderr, "\t");	
-		fprintf(stderr, "attr %s:%s\n",kbuf, v);
-	}
-*/
-
-}
-
-void XMLCALL
-s3_end_tag(void *user_data, const XML_Char *name) {
-	struct s3_xml_data *data = user_data;
-	char *tagns = NULL;
-        const char *nsdelim = strrchr(name, NS_DELIM);
-	int i;
-        if (nsdelim) {
-                tagns = strndup(name, nsdelim - name);
-                name = nsdelim + 1;
-        }
-	data->level -= 1;
-	for (i = 0; i < data->level; i++) 
-		fprintf(stderr, "\t");	
-        fprintf(stderr, "</%s>\n", name);
-}
-void XMLCALL
-s3_data(void *user_data, const XML_Char *s, int len) {
-	int i;
-	struct s3_xml_data *data = user_data;
-	for (i = 0; i < data->level; i++) 
-		fprintf(stderr, "\t");	
-	fprintf(stderr, "%.*s\n", len, s);
-}
-static void xml_do_stuff(char *str) {
-	XML_Parser parser;
-	struct s3_xml_data *data = malloc(sizeof (struct s3_xml_data));
-	data->level = 0;
-	parser = XML_ParserCreateNS("UTF-8", NS_DELIM);
-	
-	XML_SetElementHandler(parser, s3_start_tag, s3_end_tag);
-	XML_SetCharacterDataHandler(parser, s3_data);
-	XML_SetUserData(parser, data);
-
-	if (!XML_Parse(parser, str, strlen(str), 1)) {
-		fprintf(stderr, "Parser error!\n");	/* error */	
-		fprintf(stderr, "str is %s\n", str);
-	}	
-
-	XML_ParserFree(parser);
-	free(data);
-}
-#endif 
 char *
 hmac_sign(const char *key, const char *str, size_t len) {
 	unsigned char *digest; 
