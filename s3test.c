@@ -511,7 +511,7 @@ int main (int argc, char **argv) {
 	struct S3 *s3; 
 	
 	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com");
-	const char *bucket = "REDACTED";
+	const char *bucket = S3_BUCKET;
 	
 	s3_list_bucket(s3, bucket); 
 	
