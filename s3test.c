@@ -383,7 +383,7 @@ s3_make_date() {
 }
 /* Add return values later */
 void
-s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *sign_data, const char *date, struct s3_string *str) {
+s3_perform_op(struct S3 *s3, const char *url, const char *sign_data, const char *date, struct s3_string *str) {
 	char *digest;
 	char *hdr;
 	
@@ -447,7 +447,7 @@ s3_list_bucket(struct S3 *s3, const char *bucket) {
 	asprintf(&sign_data, "%s\n\n\n%s\n/%s/", method, date, bucket);	
       	asprintf(&url, "http://%s.%s/?delimiter=/", bucket, s3->base_url);
 
-	s3_perform_op(s3, method, url, sign_data, date, str);
+	s3_perform_op(s3, url, sign_data, date, str);
 
 	libxml_do_stuff(str->ptr);	
 	printf("%s\n", str->ptr);
@@ -472,7 +472,7 @@ s3_get(struct S3 *s3, const char *bucket, const char *key) {
 	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
 	str = s3_string_init();		
 	
-	s3_perform_op(s3, method, url, sign_data, date, str);
+	s3_perform_op(s3, url, sign_data, date, str);
 	printf("%ld\n", str->len);
 	
 	s3_string_free(str);
