@@ -50,7 +50,7 @@ s3_string_curl_readfunc(void *ptr, size_t len, size_t nmemb, struct s3_string *s
 	
 	memcpy(ptr, s->ptr + s->uploaded, retcode); 
 	
-	s->uploaded += retcode;  // <-- save progress
+	s->uploaded += retcode;
 	return retcode;
 }
 
