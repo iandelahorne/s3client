@@ -432,6 +432,60 @@ s3_perform_op(struct S3 *s3, const char *url, const char *sign_data, const char 
 	free(digest);	
 }
 
+void
+s3_perform_upload(struct S3 *s3, const char *url, const char *sign_data, const char *date, struct s3_string *in, struct s3_string *out) {
+	char *digest;
+	char *hdr;
+	
+	CURL *curl;
+	struct curl_slist *headers = NULL;
+
+	digest = hmac_sign(s3->secret, sign_data, strlen(sign_data));
+	/* fprintf(stderr, "Authentication: AWS %s:%s\n", s3->id, digest); */
+	
+	curl = curl_easy_init();
+	
+	hdr = malloc(1024);
+
+	snprintf(hdr, 1023, "Date: %s", date);
+	headers = curl_slist_append(headers, hdr);
+
+	snprintf(hdr, 1023, "Authorization: AWS %s:%s", s3->id, digest);
+	headers = curl_slist_append(headers, hdr);
+	free(hdr);
+	
+	
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+/*	curl_easy_setopt(curl, CURLOPT_HEADER, 1); */
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+	/* http://stackoverflow.com/questions/2329571/c-libcurl-get-output-into-a-string */
+
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s3_string_curl_writefunc);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, out);
+
+	curl_easy_setopt(curl, CURLOPT_READFUNCTION, s3_string_curl_readfunc);
+	curl_easy_setopt(curl, CURLOPT_READDATA, in);
+	curl_easy_setopt(curl, CURLOPT_INFILESIZE, in->len);
+
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+#if 0
+	curl_easy_setopt(curl, CURLOPT_PROXY, "http://localhost:8080");
+#endif
+
+	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1);
+
+
+	curl_easy_perform(curl);
+
+	curl_easy_cleanup(curl);
+	curl_slist_free_all(headers);
+
+	free(digest);	
+}
+
 static void
 s3_list_bucket(struct S3 *s3, const char *bucket) {
 	char *date;
@@ -482,6 +536,47 @@ s3_get(struct S3 *s3, const char *bucket, const char *key) {
 	free(url);
 }
 
+static void
+s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_type, const char *data, size_t len) {
+	const char *method = "PUT";
+	char *sign_data;
+	char *date;
+	char *url;
+	unsigned char *md5;
+	char content_md5[33];
+	struct s3_string *in, *out;
+
+	in = s3_string_init();
+	out = s3_string_init();
+
+	in->ptr = realloc(in->ptr, len + 1);
+	memcpy(in->ptr, data, len);
+	in->len = len;
+
+	md5 = md5_sum(data, len);
+	for(int i = 0; i < 16; ++i)
+		sprintf(&content_md5[i*2], "%02x", (unsigned int)md5[i]);
+	
+	/* printf("md5 is %s\n", content_md5); */
+	date = s3_make_date();
+	/* asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, content_md5, content_type, date, bucket, key); */
+	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, "", "", date, bucket, key); 
+
+	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
+
+	s3_perform_upload(s3, url, sign_data, date, in, out);
+	printf("url %s\n", url);
+	printf("data to sign %s\n", sign_data);
+	printf("\n%s\n", out->ptr);
+
+	s3_string_free(in);
+	s3_string_free(out);
+
+	free(url);
+	free(md5);
+	free(sign_data);
+}
+
 
 int main (int argc, char **argv) {
 	struct S3 *s3; 
@@ -489,11 +584,11 @@ int main (int argc, char **argv) {
 	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com");
 	const char *bucket = "REDACTED";
 	
-	s3_list_bucket(s3, bucket);
+	s3_list_bucket(s3, bucket); 
 	
 	s3_get(s3, bucket, "Towel-Dog.jpg");
-
-	return 0;
+	char *val = "foo bar gazonk";
+	s3_put(s3, bucket, "trattmule.txt", "text/plain", val, strlen(val));
 	s3_free(s3);
 
 }
