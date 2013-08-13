@@ -519,5 +519,6 @@ int main (int argc, char **argv) {
 	char *val = "foo bar gazonk";
 	s3_put(s3, bucket, "trattmule.txt", "text/plain", val, strlen(val));
 	s3_free(s3);
-
+	
+	return 0;
 }
