@@ -379,7 +379,7 @@ s3_perform_op(struct S3 *s3, const char *url, const char *sign_data, const char 
 }
 
 void
-s3_perform_upload(struct S3 *s3, const char *url, const char *sign_data, const char *date, struct s3_string *in, struct s3_string *out) {
+s3_perform_upload(struct S3 *s3, const char *url, const char *sign_data, const char *date, const char *content_md5, const char *content_type, struct s3_string *in, struct s3_string *out) {
 	char *digest;
 	char *hdr;
 	
@@ -393,14 +393,24 @@ s3_perform_upload(struct S3 *s3, const char *url, const char *sign_data, const c
 	
 	hdr = malloc(1024);
 
+	if (content_type) {
+		snprintf(hdr, 1023, "Content-Type: %s", content_type);
+		headers = curl_slist_append(headers, hdr);
+	}
+	
+	if (content_md5) {
+		snprintf(hdr, 1023, "Content-MD5: %s", content_md5);
+		headers = curl_slist_append(headers, hdr);
+	}		
+
 	snprintf(hdr, 1023, "Date: %s", date);
 	headers = curl_slist_append(headers, hdr);
 
 	snprintf(hdr, 1023, "Authorization: AWS %s:%s", s3->id, digest);
 	headers = curl_slist_append(headers, hdr);
+
 	free(hdr);
-	
-	
+		
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 /*	curl_easy_setopt(curl, CURLOPT_HEADER, 1); */
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
@@ -507,12 +517,14 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 	
 	/* printf("md5 is %s\n", content_md5); */
 	date = s3_make_date();
-	/* asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, content_md5, content_type, date, bucket, key); */
-	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, "", "", date, bucket, key); 
+	/* asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, content_md5 ?  content_md5 : "", content_type ? content_type : "", date, bucket, key);  */
+	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, "", content_type ? content_type : "", date, bucket, key);  */
+
 
 	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
 
-	s3_perform_upload(s3, url, sign_data, date, in, out);
+	/* s3_perform_upload(s3, url, sign_data, date, content_md5, content_type, in, out);*/
+	s3_perform_upload(s3, url, sign_data, date, NULL, content_type, in, out);
 	printf("url %s\n", url);
 	printf("data to sign %s\n", sign_data);
 	printf("\n%s\n", out->ptr);
