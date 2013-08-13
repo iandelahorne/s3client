@@ -1,5 +1,5 @@
-CFLAGS=-g -Wall -I/opt/local/include  -I/opt/local/include/libxml2
-LDFLAGS=-L/opt/local/lib -lcrypto -lcurl -lssl -lxml2
+CFLAGS=-g -Wall -I/usr/include/libxml2 -DLINUX
+LDFLAGS=-L/opt/local/lib -lcrypto -lcurl -lssl -lxml2 -lbsd
 
 OBJS=s3test.o s3string.o
 

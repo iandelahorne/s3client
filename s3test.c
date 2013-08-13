@@ -22,6 +22,10 @@
  * SOFTWARE.  
  */
 
+#ifdef LINUX
+#define _GNU_SOURCE
+#include <bsd/string.h>
+#endif
 
 #include <stdio.h>
 #include <string.h>
