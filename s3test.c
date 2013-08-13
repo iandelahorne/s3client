@@ -474,6 +474,7 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 	unsigned char *md5;
 	char content_md5[33];
 	struct s3_string *in, *out;
+	int i;
 
 	in = s3_string_init();
 	out = s3_string_init();
@@ -483,7 +484,7 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 	in->len = len;
 
 	md5 = md5_sum(data, len);
-	for(int i = 0; i < 16; ++i)
+	for(i = 0; i < 16; ++i)
 		sprintf(&content_md5[i*2], "%02x", (unsigned int)md5[i]);
 	
 	/* printf("md5 is %s\n", content_md5); */
