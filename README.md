@@ -13,7 +13,7 @@ Dependencies:
 * libxml2 
 * libcurl
  
-Currently it compiles on my Mac, Linux support  will be added later.
+Currently it compiles on OSX and Linux.
 Amazon secret ID and key are defined in s3_secret.h
 
 Todo
