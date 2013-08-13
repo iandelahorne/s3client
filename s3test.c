@@ -449,6 +449,7 @@ s3_list_bucket(struct S3 *s3, const char *bucket) {
 	printf("%s\n", str->ptr);
 
 	s3_string_free(str);
+	free(url);
 	free(sign_data);
 	free(date);
 }
@@ -517,6 +518,7 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 
 	free(url);
 	free(md5);
+	free(date);
 	free(sign_data);
 }
 
