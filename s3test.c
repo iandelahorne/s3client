@@ -152,6 +152,18 @@ s3_free(struct S3 *s3) {
 	free(s3);
 }
 
+static void 
+s3_content_free(struct s3_content *content) {
+	if (content->key)
+		free(content->key);
+	if (content->lastmod)
+		free(content->lastmod);
+	if (content->etag)
+		free(content->etag);
+
+	free(content);
+}
+
 void
 register_namespaces(xmlXPathContextPtr ctx, const xmlChar *nsList) {
 	xmlChar* nsListDup;
@@ -256,6 +268,7 @@ walk_xpath_nodes(xmlNodeSetPtr nodes) {
 			/* Push this onto a list of contents, return list */
 			struct s3_content *content = parse_content(cur->children);
 			printf("Content parsed for key %s\n", content->key);
+			s3_content_free(content);
 		}
 	}
 }
