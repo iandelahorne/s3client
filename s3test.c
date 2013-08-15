@@ -63,6 +63,7 @@ struct S3 {
 	char *secret;
 	char *id;
 	char *base_url;
+	char *proxy;
 };
 
 char *
@@ -132,7 +133,7 @@ md5_sum(const char *content, size_t len) {
 }
 
 static struct S3 *
-s3_init(const char *id, const char *secret, const char *base_url) {
+s3_init(const char *id, const char *secret, const char *base_url, const char *proxy) {
 	struct S3 *s3 = malloc(sizeof (struct S3));
 
 	s3->id = malloc(S3_ID_LENGTH);
@@ -143,6 +144,9 @@ s3_init(const char *id, const char *secret, const char *base_url) {
 	strlcpy(s3->id, id, S3_ID_LENGTH);
 	strlcpy(s3->secret, secret, S3_SECRET_LENGTH);
 	strlcpy(s3->base_url, base_url, 255);
+	if (proxy) {
+		strlcpy(s3->base_url, base_url, 255);
+	}
 
 	return s3;
 }
@@ -329,7 +333,7 @@ s3_make_date() {
 }
 /* Add return values later */
 void
-s3_perform_op(struct S3 *s3, const char *url, const char *sign_data, const char *date, struct s3_string *str) {
+s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *sign_data, const char *date, struct s3_string *out, struct s3_string *in, const char *content_md5, const char *content_type) {
 	char *digest;
 	char *hdr;
 	
@@ -347,70 +351,33 @@ s3_perform_op(struct S3 *s3, const char *url, const char *sign_data, const char 
 	
 	hdr = malloc(1024);
 
-	snprintf(hdr, 1023, "Date: %s", date);
-	headers = curl_slist_append(headers, hdr);
-
-	snprintf(hdr, 1023, "Authorization: AWS %s:%s", s3->id, digest);
-	headers = curl_slist_append(headers, hdr);
-	free(hdr);
-	
-	
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-/*	curl_easy_setopt(curl, CURLOPT_HEADER, 1); */
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-	/* http://stackoverflow.com/questions/2329571/c-libcurl-get-output-into-a-string */
-
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s3_string_curl_writefunc);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, str);
-
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-#if 0
-	curl_easy_setopt(curl, CURLOPT_PROXY, "http://localhost:8080");
-#endif
-	curl_easy_perform(curl);
-
-	curl_easy_cleanup(curl);
-	curl_slist_free_all(headers);
-
-	free(digest);	
-}
-
-void
-s3_perform_upload(struct S3 *s3, const char *url, const char *sign_data, const char *date, const char *content_md5, const char *content_type, struct s3_string *in, struct s3_string *out) {
-	char *digest;
-	char *hdr;
-	
-	CURL *curl;
-	struct curl_slist *headers = NULL;
-
-	digest = hmac_sign(s3->secret, sign_data, strlen(sign_data));
-	/* fprintf(stderr, "Authentication: AWS %s:%s\n", s3->id, digest); */
-	
-	curl = curl_easy_init();
-	
-	hdr = malloc(1024);
-
-	if (content_type) {
-		snprintf(hdr, 1023, "Content-Type: %s", content_type);
-		headers = curl_slist_append(headers, hdr);
-	}
-	
-	if (content_md5) {
-		snprintf(hdr, 1023, "Content-MD5: %s", content_md5);
-		headers = curl_slist_append(headers, hdr);
-	}		
-
-	snprintf(hdr, 1023, "Date: %s", date);
-	headers = curl_slist_append(headers, hdr);
-
-	snprintf(hdr, 1023, "Authorization: AWS %s:%s", s3->id, digest);
-	headers = curl_slist_append(headers, hdr);
-
-	free(hdr);
+	if (strcmp(method, "DELETE") == 0) {
+		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
+	} else if (strcmp(method, "PUT") == 0) {
+		if (content_type) {
+			snprintf(hdr, 1023, "Content-Type: %s", content_type);
+			headers = curl_slist_append(headers, hdr);
+		}
 		
+		if (content_md5) {
+			snprintf(hdr, 1023, "Content-MD5: %s", content_md5);
+			headers = curl_slist_append(headers, hdr);
+		}		
+		
+		curl_easy_setopt(curl, CURLOPT_READFUNCTION, s3_string_curl_readfunc);
+		curl_easy_setopt(curl, CURLOPT_READDATA, in);
+		curl_easy_setopt(curl, CURLOPT_INFILESIZE, in->len);
+		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1);
+	}
+
+	snprintf(hdr, 1023, "Date: %s", date);
+	headers = curl_slist_append(headers, hdr);
+
+	snprintf(hdr, 1023, "Authorization: AWS %s:%s", s3->id, digest);
+	headers = curl_slist_append(headers, hdr);
+	free(hdr);
+	
+	
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 /*	curl_easy_setopt(curl, CURLOPT_HEADER, 1); */
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
@@ -422,17 +389,10 @@ s3_perform_upload(struct S3 *s3, const char *url, const char *sign_data, const c
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s3_string_curl_writefunc);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, out);
 
-	curl_easy_setopt(curl, CURLOPT_READFUNCTION, s3_string_curl_readfunc);
-	curl_easy_setopt(curl, CURLOPT_READDATA, in);
-	curl_easy_setopt(curl, CURLOPT_INFILESIZE, in->len);
-
 	curl_easy_setopt(curl, CURLOPT_URL, url);
-#if 0
-	curl_easy_setopt(curl, CURLOPT_PROXY, "http://localhost:8080");
-#endif
-
-	curl_easy_setopt(curl, CURLOPT_UPLOAD, 1);
-
+	if (s3->proxy) {
+		curl_easy_setopt(curl, CURLOPT_PROXY, s3->proxy);
+	}
 
 	curl_easy_perform(curl);
 
@@ -441,6 +401,7 @@ s3_perform_upload(struct S3 *s3, const char *url, const char *sign_data, const c
 
 	free(digest);	
 }
+
 
 static void
 s3_list_bucket(struct S3 *s3, const char *bucket) {
@@ -457,7 +418,7 @@ s3_list_bucket(struct S3 *s3, const char *bucket) {
 	asprintf(&sign_data, "%s\n\n\n%s\n/%s/", method, date, bucket);	
       	asprintf(&url, "http://%s.%s/?delimiter=/", bucket, s3->base_url);
 
-	s3_perform_op(s3, url, sign_data, date, str);
+	s3_perform_op(s3, method, url, sign_data, date, str, NULL, NULL, NULL);
 
 	libxml_do_stuff(str->ptr);	
 	printf("%s\n", str->ptr);
@@ -470,29 +431,47 @@ s3_list_bucket(struct S3 *s3, const char *bucket) {
 
 
 static void
-s3_get(struct S3 *s3, const char *bucket, const char *key) {
+s3_get(struct S3 *s3, const char *bucket, const char *key, struct s3_string *out) {
 	const char *method = "GET";
 	char *sign_data;
 	char *date;
 	char *url;
-	struct s3_string *str;
-
+	
 	date = s3_make_date();
 
 	asprintf(&sign_data, "%s\n\n\n%s\n/%s/%s", method, date, bucket, key);	
 	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
-	str = s3_string_init();		
 	
-	s3_perform_op(s3, url, sign_data, date, str);
-	printf("%ld\n", str->len);
-	
-	s3_string_free(str);
+	s3_perform_op(s3, method, url, sign_data, date, out, NULL, NULL, NULL);
 
 	free(sign_data);
 	free(date);
 	free(url);
 }
 
+
+static void
+s3_delete(struct S3 *s3, const char *bucket, const char *key) {
+	char *sign_data;
+	char *url;
+	char *date;
+	const char *method = "DELETE";
+	struct s3_string *out;
+       
+	out = s3_string_init();
+	date = s3_make_date();
+
+	asprintf(&sign_data, "%s\n\n\n%s\n/%s/%s", method, date, bucket, key);
+	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
+	
+	s3_perform_op(s3, method, url, sign_data, date, out, NULL, NULL, NULL);
+
+	s3_string_free(out);
+	free(date);
+	free(url);
+	free(sign_data);
+	
+}
 static void
 s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_type, const char *data, size_t len) {
 	const char *method = "PUT";
@@ -518,13 +497,13 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 	/* printf("md5 is %s\n", content_md5); */
 	date = s3_make_date();
 	/* asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, content_md5 ?  content_md5 : "", content_type ? content_type : "", date, bucket, key);  */
-	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, "", content_type ? content_type : "", date, bucket, key);  */
+	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, "", content_type ? content_type : "", date, bucket, key);  
 
 
 	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
 
 	/* s3_perform_upload(s3, url, sign_data, date, content_md5, content_type, in, out);*/
-	s3_perform_upload(s3, url, sign_data, date, NULL, content_type, in, out);
+	s3_perform_op(s3, method, url, sign_data, date, out, in, NULL, content_type);
 	printf("url %s\n", url);
 	printf("data to sign %s\n", sign_data);
 	printf("\n%s\n", out->ptr);
@@ -541,15 +520,21 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 
 int main (int argc, char **argv) {
 	struct S3 *s3; 
+	struct s3_string *out;
 	
-	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com");
+	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com", NULL);
 	const char *bucket = S3_BUCKET;
 	
 	s3_list_bucket(s3, bucket); 
 	
-	s3_get(s3, bucket, "Towel-Dog.jpg");
+	out = s3_string_init();
+	s3_get(s3, bucket, "Towel-Dog.jpg", out);
+	s3_string_free(out);
+       
 	char *val = "foo bar gazonk";
 	s3_put(s3, bucket, "trattmule.txt", "text/plain", val, strlen(val));
+	
+	s3_delete(s3, bucket, "trattmule.txt");
 	s3_free(s3);
 	
 	return 0;
