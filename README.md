@@ -23,7 +23,6 @@ In no particular order, features that are left are:
 - Bucket creation
 - Bucket deletion
 - Support for key prefixes / paths
-- MD5 sum of uploaded content
 - Contents of bucket lists should be a BSD queue.h list
 - Make into an actual library
 - ACLs
