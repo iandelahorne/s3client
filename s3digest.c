@@ -75,22 +75,39 @@ s3_hmac_sign(const char *key, const char *str, size_t len) {
 	return buf;
 }
 
-unsigned char *
+char *
 s3_md5_sum(const char *content, size_t len) {
 
 	const EVP_MD *md = EVP_md5();
-	unsigned char *md_value;
+	unsigned char *digest;
 	EVP_MD_CTX *ctx;
-	unsigned int md_len;
-	
-	md_value = malloc(EVP_MAX_MD_SIZE);
+	unsigned int digest_len;
+	BIO *bmem, *b64;
+	BUF_MEM *bufptr;
+	char *buf;
+
+	digest = malloc(EVP_MAX_MD_SIZE);
 	
 	ctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(ctx, md, NULL);
 	EVP_DigestUpdate(ctx, content, len);
-	EVP_DigestFinal_ex(ctx, md_value, &md_len);
+	EVP_DigestFinal_ex(ctx, digest, &digest_len);
+
+	b64  = BIO_new(BIO_f_base64());
+	bmem = BIO_new(BIO_s_mem());
+	b64  = BIO_push(b64, bmem);
+
+	BIO_write(b64, digest, digest_len);
+	(void) BIO_flush(b64);
+	BIO_get_mem_ptr(b64, &bufptr);
 	
+	buf = malloc(bufptr->length);
+	memcpy(buf, bufptr->data, bufptr->length - 1);
+	buf[bufptr->length - 1] = '\0';
+
+	BIO_free_all(b64);
+
 	EVP_MD_CTX_destroy(ctx);
 
-	return md_value;
+	return buf;
 }

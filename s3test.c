@@ -408,10 +408,8 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 	char *sign_data;
 	char *date;
 	char *url;
-	unsigned char *md5;
-	char content_md5[33];
+	char *md5;
 	struct s3_string *in, *out;
-	int i;
 
 	in = s3_string_init();
 	out = s3_string_init();
@@ -421,19 +419,17 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 	in->len = len;
 
 	md5 = s3_md5_sum(data, len);
-	for(i = 0; i < 16; ++i)
-		sprintf(&content_md5[i*2], "%02x", (unsigned int)md5[i]);
-	
+
 	/* printf("md5 is %s\n", content_md5); */
 	date = s3_make_date();
 	/* asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, content_md5 ?  content_md5 : "", content_type ? content_type : "", date, bucket, key);  */
-	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, "", content_type ? content_type : "", date, bucket, key);  
+	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, md5, content_type ? content_type : "", date, bucket, key);  
 
 
 	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
 
 	/* s3_perform_upload(s3, url, sign_data, date, content_md5, content_type, in, out);*/
-	s3_perform_op(s3, method, url, sign_data, date, out, in, NULL, content_type);
+	s3_perform_op(s3, method, url, sign_data, date, out, in, md5, content_type);
 	printf("url %s\n", url);
 	printf("data to sign %s\n", sign_data);
 	printf("\n%s\n", out->ptr);
