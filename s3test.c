@@ -30,11 +30,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <openssl/engine.h>
-#include <openssl/hmac.h>
-#include <openssl/evp.h>
-#include <openssl/bio.h>
-
 #include <curl/curl.h>
 
 #include <libxml/parser.h>
@@ -66,71 +61,6 @@ struct S3 {
 	char *proxy;
 };
 
-char *
-hmac_sign(const char *key, const char *str, size_t len) {
-	unsigned char *digest; 
-	char *buf;
-	unsigned int digest_len = EVP_MAX_MD_SIZE; /* HMAC_Final needs at most EVP_MAX_MD_SIZE bytes */
-	HMAC_CTX ctx;
-	BIO *bmem, *b64;
-	BUF_MEM *bufptr;
-	
-	ENGINE_load_builtin_engines();
-	ENGINE_register_all_complete();
-
-	/* Setup HMAC context, init with sha1 and our key*/ 
-	HMAC_CTX_init(&ctx);
-	HMAC_Init_ex(&ctx, key, strlen((char *)key), EVP_sha1(), NULL);
-
-	/* Create Base64 BIO filter that outputs to memory */
-	b64  = BIO_new(BIO_f_base64());
-	bmem = BIO_new(BIO_s_mem());
-	b64  = BIO_push(b64, bmem);
-
-	/* Give us a buffer to write result into */
-	digest = malloc(digest_len);
-
-	/* Push data into HMAC */
-	HMAC_Update(&ctx, (unsigned char *)str, (unsigned int)len);
-
-	/* Flush HMAC data into buffer */
-	HMAC_Final(&ctx, digest, &digest_len);
-
-	/* Write data into BIO, flush and fetch the data */
-	BIO_write(b64, digest, digest_len);
-	(void) BIO_flush(b64);
-	BIO_get_mem_ptr(b64, &bufptr);
-	
-	buf = malloc(bufptr->length);
-	memcpy(buf, bufptr->data, bufptr->length - 1);
-	buf[bufptr->length - 1] = '\0';
-
-	BIO_free_all(b64);
-	HMAC_CTX_cleanup(&ctx);
-
-	free(digest);
-	return buf;
-}
-
-static unsigned char *
-md5_sum(const char *content, size_t len) {
-
-	const EVP_MD *md = EVP_md5();
-	unsigned char *md_value;
-	EVP_MD_CTX *ctx;
-	unsigned int md_len;
-	
-	md_value = malloc(EVP_MAX_MD_SIZE);
-	
-	ctx = EVP_MD_CTX_create();
-	EVP_DigestInit_ex(ctx, md, NULL);
-	EVP_DigestUpdate(ctx, content, len);
-	EVP_DigestFinal_ex(ctx, md_value, &md_len);
-	
-	EVP_MD_CTX_destroy(ctx);
-
-	return md_value;
-}
 
 static struct S3 *
 s3_init(const char *id, const char *secret, const char *base_url, const char *proxy) {
@@ -344,7 +274,7 @@ s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *si
 
 	fprintf(stderr, "data to sign:%s\n", sign_data);
 
-	digest = hmac_sign(s3->secret, sign_data, strlen(sign_data));
+	digest = s3_hmac_sign(s3->secret, sign_data, strlen(sign_data));
 	/* fprintf(stderr, "Authentication: AWS %s:%s\n", s3->id, digest); */
 	
 	curl = curl_easy_init();
@@ -490,7 +420,7 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 	memcpy(in->ptr, data, len);
 	in->len = len;
 
-	md5 = md5_sum(data, len);
+	md5 = s3_md5_sum(data, len);
 	for(i = 0; i < 16; ++i)
 		sprintf(&content_md5[i*2], "%02x", (unsigned int)md5[i]);
 	
