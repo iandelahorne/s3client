@@ -334,7 +334,7 @@ s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *si
 
 
 static void
-s3_list_bucket(struct S3 *s3, const char *bucket) {
+s3_list_bucket(struct S3 *s3, const char *bucket, const char *prefix) {
 	char *date;
 	char *sign_data;	
 	char *url;
@@ -346,7 +346,7 @@ s3_list_bucket(struct S3 *s3, const char *bucket) {
 	date = s3_make_date();
 
 	asprintf(&sign_data, "%s\n\n\n%s\n/%s/", method, date, bucket);	
-      	asprintf(&url, "http://%s.%s/?delimiter=/", bucket, s3->base_url);
+      	asprintf(&url, "http://%s.%s/?delimiter=/%s%s", bucket, s3->base_url, prefix ? "&prefix=" : "", prefix);
 
 	s3_perform_op(s3, method, url, sign_data, date, str, NULL, NULL, NULL);
 
@@ -451,7 +451,8 @@ int main (int argc, char **argv) {
 	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com", NULL);
 	const char *bucket = S3_BUCKET;
 	
-	s3_list_bucket(s3, bucket); 
+	s3_list_bucket(s3, bucket, NULL);
+	s3_list_bucket_prefix(s3, bucket, "foo/bar/");
 	
 	out = s3_string_init();
 	s3_get(s3, bucket, "Towel-Dog.jpg", out);
