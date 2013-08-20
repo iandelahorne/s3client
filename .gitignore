@@ -1,1 +1,3 @@
 s3_secret.h
+*.o
+s3test
