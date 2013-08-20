@@ -48,9 +48,6 @@ struct s3_content {
 	char *etag;
 };
 
-struct s3_xml_data {
-	int level;
-};
 #define S3_SECRET_LENGTH 128
 #define S3_ID_LENGTH 128
 
