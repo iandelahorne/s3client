@@ -106,7 +106,7 @@ s3_md5_sum(const char *content, size_t len) {
 	buf[bufptr->length - 1] = '\0';
 
 	BIO_free_all(b64);
-
+	free(digest);
 	EVP_MD_CTX_destroy(ctx);
 
 	return buf;
