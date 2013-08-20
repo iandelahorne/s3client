@@ -243,6 +243,7 @@ libxml_do_stuff(char *str) {
 	execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/");
 	
 	xmlFreeDoc(doc);
+	xmlCleanupParser();
 }
 
 
