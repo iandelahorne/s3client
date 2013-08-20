@@ -74,9 +74,8 @@ s3_init(const char *id, const char *secret, const char *base_url, const char *pr
 	strlcpy(s3->id, id, S3_ID_LENGTH);
 	strlcpy(s3->secret, secret, S3_SECRET_LENGTH);
 	strlcpy(s3->base_url, base_url, 255);
-	if (proxy) {
-		strlcpy(s3->base_url, base_url, 255);
-	}
+	
+	s3->proxy = NULL;
 
 	return s3;
 }
