@@ -71,6 +71,7 @@ s3_hmac_sign(const char *key, const char *str, size_t len) {
 	BIO_free_all(b64);
 	HMAC_CTX_cleanup(&ctx);
 
+	ENGINE_cleanup();
 	free(digest);
 	return buf;
 }
