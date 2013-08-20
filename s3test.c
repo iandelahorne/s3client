@@ -452,7 +452,7 @@ int main (int argc, char **argv) {
 	const char *bucket = S3_BUCKET;
 	
 	s3_list_bucket(s3, bucket, NULL);
-	s3_list_bucket_prefix(s3, bucket, "foo/bar/");
+	s3_list_bucket(s3, bucket, "foo/bar/");
 	
 	out = s3_string_init();
 	s3_get(s3, bucket, "Towel-Dog.jpg", out);
