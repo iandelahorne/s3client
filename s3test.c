@@ -166,6 +166,20 @@ parse_content(xmlNode *root) {
 	return content;
 	
 }
+void
+parse_prefixes(xmlNode *root) {
+	xmlNode *node = NULL;
+	for (node = root; node; node = node->next) {
+		if (node->type == XML_ELEMENT_NODE) {
+			xmlChar *value =  xmlNodeGetContent(node->children);
+			/* size_t len = strlen((const char *) value); */
+			
+			printf("Prefix node type: Element, name: %s\n", node->name);
+			printf("Prefix node xmlsNodeGetContent: %s\n",value);
+			xmlFree(value);
+		}
+	}
+}
 /* 
 void
 libxml_walk_nodes(xmlNode *root) {
@@ -180,7 +194,7 @@ libxml_walk_nodes(xmlNode *root) {
 */
 
 void 
-walk_xpath_nodes(xmlNodeSetPtr nodes) {
+walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
 	xmlNodePtr cur;
 	int size;
 	int i;
@@ -193,14 +207,14 @@ walk_xpath_nodes(xmlNodeSetPtr nodes) {
 			
 			/* Push this onto a list of contents, return list */
 			struct s3_content *content = parse_content(cur->children);
-			printf("Content parsed for key %s\n", content->key);
+			printf("\tKey %s\n", content->key);
 			s3_content_free(content);
 		}
 	}
 }
-/* Should change this to a callback */
+
 void 
-execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, const xmlChar *ns_list) {
+execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, const xmlChar *ns_list, void (*nodeset_cb)(xmlNodeSetPtr, void *), void *cb_data) {
 	xmlXPathContextPtr xpath_ctx;
 	xmlXPathObjectPtr xpath_obj;
 
@@ -215,10 +229,27 @@ execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, const xmlChar
 	if(xpath_obj == NULL) {
 		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpath_expr);
 	}
-	walk_xpath_nodes(xpath_obj->nodesetval);
+
+	nodeset_cb(xpath_obj->nodesetval, cb_data);
 
 	xmlXPathFreeObject(xpath_obj);
 	xmlXPathFreeContext(xpath_ctx); 
+}
+
+void 
+walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
+	xmlNodePtr cur;
+	int size;
+	int i;
+
+	size = (nodes) ? nodes->nodeNr : 0;
+	printf("size is %d nodes\n", size);
+	for (i = 0; i < size ; i++) {
+		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
+			cur = nodes->nodeTab[i];
+			parse_prefixes(cur->children);
+		}
+	}
 }
 
 void 
@@ -228,7 +259,10 @@ libxml_do_stuff(char *str) {
 	/* xmlNode *root_element = xmlDocGetRootElement(doc); */
 
 	/* Since Amazon uses an XML Namespace, we need to declare it and use it as a prefix in Xpath queries, even though it's  */
-	execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/");
+	execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/",
+			   walk_xpath_nodes, NULL);
+	execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/",
+			   walk_xpath_prefixes, NULL);
 	
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
