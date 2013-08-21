@@ -184,10 +184,11 @@ walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
 }
 
 void 
-execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, const xmlChar *ns_list, void (*nodeset_cb)(xmlNodeSetPtr, void *), void *cb_data) {
+execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, void (*nodeset_cb)(xmlNodeSetPtr, void *), void *cb_data) {
 	xmlXPathContextPtr xpath_ctx;
 	xmlXPathObjectPtr xpath_obj;
-
+	const xmlChar *ns_list = (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/";
+	
 	xpath_ctx = xmlXPathNewContext(doc);
 	if (xpath_ctx == NULL) {
 		fprintf(stderr,"Error: unable to create new XPath context\n");
@@ -229,18 +230,12 @@ libxml_do_stuff(char *str) {
 	/* xmlNode *root_element = xmlDocGetRootElement(doc); */
 
 	/* Since Amazon uses an XML Namespace, we need to declare it and use it as a prefix in Xpath queries, even though it's  */
-	execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/",
-			   walk_xpath_nodes, NULL);
-	execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/",
-			   walk_xpath_prefixes, NULL);
+	execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_nodes, NULL);
+	execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_prefixes, NULL);
 	
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
 }
-
-
-
-
 
 static void
 s3_list_bucket(struct S3 *s3, const char *bucket, const char *prefix) {
