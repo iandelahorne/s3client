@@ -48,36 +48,6 @@ struct s3_content {
 	char *etag;
 };
 
-#define S3_SECRET_LENGTH 128
-#define S3_ID_LENGTH 128
-
-static struct S3 *
-s3_init(const char *id, const char *secret, const char *base_url, const char *proxy) {
-	struct S3 *s3 = malloc(sizeof (struct S3));
-
-	s3->id = malloc(S3_ID_LENGTH);
-	s3->secret = malloc(S3_SECRET_LENGTH);
-	/* XXX better length */
-	s3->base_url = malloc(256); 
-	
-	strlcpy(s3->id, id, S3_ID_LENGTH);
-	strlcpy(s3->secret, secret, S3_SECRET_LENGTH);
-	strlcpy(s3->base_url, base_url, 255);
-	
-	s3->proxy = NULL;
-
-	return s3;
-}
-
-static void
-s3_free(struct S3 *s3) {
-	free(s3->id);
-	free(s3->secret);
-	free(s3->base_url);
-	
-	free(s3);
-}
-
 static void 
 s3_content_free(struct s3_content *content) {
 	if (content->key)
@@ -304,7 +274,7 @@ int main (int argc, char **argv) {
 	struct S3 *s3; 
 	struct s3_string *out;
 	
-	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com", NULL);
+	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com");
 	const char *bucket = S3_BUCKET;
 	
 	s3_list_bucket(s3, bucket, NULL);

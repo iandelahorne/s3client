@@ -27,6 +27,9 @@
 
 #include <string.h>
 
+#define S3_SECRET_LENGTH 128
+#define S3_ID_LENGTH 128
+
 struct s3_string {
 	char *ptr;
 	size_t len;
@@ -41,6 +44,8 @@ struct S3 {
 	char *proxy;
 };
 
+struct S3 * s3_init(const char *id, const char *secret, const char *base_url);
+void s3_free(struct S3 *s3);
 
 
 struct s3_string * s3_string_init();
