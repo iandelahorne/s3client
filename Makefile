@@ -1,7 +1,7 @@
 CFLAGS=-g -Wall -I/opt/local/include  -I/opt/local/include/libxml2
 LDFLAGS=-L/opt/local/lib -lcrypto -lcurl -lssl -lxml2
 
-OBJS=s3test.o s3string.o s3digest.o s3ops.o
+OBJS=s3test.o s3string.o s3digest.o s3ops.o s3xml.o
 
 all: s3test
 

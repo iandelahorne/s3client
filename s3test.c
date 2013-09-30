@@ -32,14 +32,11 @@
 
 #include <curl/curl.h>
 
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-#include <libxml/xpath.h>
-#include <libxml/xpathInternals.h>
-
 
 #include "s3.h"
+#include "s3xml.h"
 #include "s3_secret.h"
+
 
 struct s3_content {
 	char *key;
@@ -60,52 +57,6 @@ s3_content_free(struct s3_content *content) {
 	free(content);
 }
 
-void
-register_namespaces(xmlXPathContextPtr ctx, const xmlChar *nsList) {
-	xmlChar* nsListDup;
-	xmlChar* prefix;
-	xmlChar* href;
-	xmlChar* next;
-	
-	nsListDup = xmlStrdup(nsList);
-	if(nsListDup == NULL) {
-		fprintf(stderr, "Error: unable to strdup namespaces list\n");
-		return;
-	}
-	
-	next = nsListDup; 
-	while(next != NULL) {
-		/* skip spaces */
-		while((*next) == ' ') next++;
-		if((*next) == '\0') break;
-		
-		/* find prefix */
-		prefix = next;
-		next = (xmlChar*)xmlStrchr(next, '=');
-		if(next == NULL) {
-			fprintf(stderr,"Error: invalid namespaces list format\n");
-			xmlFree(nsListDup);
-			return;
-		}
-		*(next++) = '\0';	
-		
-		/* find href */
-		href = next;
-		next = (xmlChar*)xmlStrchr(next, ' ');
-		if(next != NULL) {
-			*(next++) = '\0';	
-		}
-		
-		/* do register namespace */
-		if(xmlXPathRegisterNs(ctx, prefix, href) != 0) {
-			fprintf(stderr,"Error: unable to register NS with prefix=\"%s\" and href=\"%s\"\n", prefix, href);
-			xmlFree(nsListDup);
-			return;
-		}
-	}
-	
-	xmlFree(nsListDup);
-}
 
 struct s3_content *
 parse_content(xmlNode *root) {
@@ -183,29 +134,6 @@ walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
 	}
 }
 
-void 
-execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, void (*nodeset_cb)(xmlNodeSetPtr, void *), void *cb_data) {
-	xmlXPathContextPtr xpath_ctx;
-	xmlXPathObjectPtr xpath_obj;
-	const xmlChar *ns_list = (const xmlChar *)"amzn=http://s3.amazonaws.com/doc/2006-03-01/";
-	
-	xpath_ctx = xmlXPathNewContext(doc);
-	if (xpath_ctx == NULL) {
-		fprintf(stderr,"Error: unable to create new XPath context\n");
-	}
-
-	register_namespaces(xpath_ctx, ns_list);
-	
-	xpath_obj = xmlXPathEvalExpression(xpath_expr, xpath_ctx);
-	if(xpath_obj == NULL) {
-		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpath_expr);
-	}
-
-	nodeset_cb(xpath_obj->nodesetval, cb_data);
-
-	xmlXPathFreeObject(xpath_obj);
-	xmlXPathFreeContext(xpath_ctx); 
-}
 
 void 
 walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
@@ -230,8 +158,8 @@ libxml_do_stuff(char *str) {
 	/* xmlNode *root_element = xmlDocGetRootElement(doc); */
 
 	/* Since Amazon uses an XML Namespace, we need to declare it and use it as a prefix in Xpath queries, even though it's  */
-	execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_nodes, NULL);
-	execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_prefixes, NULL);
+	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_nodes, NULL);
+	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_prefixes, NULL);
 	
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
