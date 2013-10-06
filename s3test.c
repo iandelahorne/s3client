@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/queue.h>
 
 #include <curl/curl.h>
 
@@ -43,7 +44,10 @@ struct s3_content {
 	char *lastmod; /* time_t */
 	size_t size;
 	char *etag;
+	TAILQ_ENTRY(s3_content) list;
 };
+
+TAILQ_HEAD(s3_content_head, s3_content);
 
 static void 
 s3_content_free(struct s3_content *content) {
@@ -116,9 +120,12 @@ libxml_walk_nodes(xmlNode *root) {
 
 void 
 walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
+	struct s3_content_head *head;
 	xmlNodePtr cur;
 	int size;
 	int i;
+
+	head = (struct s3_content_head *) data;
 
 	size = (nodes) ? nodes->nodeNr : 0;
 	printf("size is %d nodes\n", size);
@@ -126,13 +133,12 @@ walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
 		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
 			cur = nodes->nodeTab[i];
 			
-			/* Push this onto a list of contents, return list */
 			struct s3_content *content = parse_content(cur->children);
-			printf("\tKey %s\n", content->key);
-			s3_content_free(content);
+			TAILQ_INSERT_TAIL(head, content, list);
 		}
 	}
 }
+
 
 
 void 
@@ -153,13 +159,27 @@ walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
 
 void 
 libxml_do_stuff(char *str) {
+	struct s3_content_head *contents;
+	struct s3_content *c;
 	xmlDocPtr doc;
-	doc = xmlReadMemory(str, strlen(str), "noname.xml", NULL, 0);
-	/* xmlNode *root_element = xmlDocGetRootElement(doc); */
 
-	/* Since Amazon uses an XML Namespace, we need to declare it and use it as a prefix in Xpath queries, even though it's  */
-	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_nodes, NULL);
+	contents = malloc(sizeof (*contents));
+	TAILQ_INIT(contents);
+
+	doc = xmlReadMemory(str, strlen(str), "noname.xml", NULL, 0);
+
+	/* 
+	 * Since Amazon uses an XML Namespace, we need to declare it
+	 * and use it as a prefix in Xpath queries, even though it's
+	 * not written out in the tag names - libxml2 follows the
+	 * standard where others don't
+	 */
+	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_nodes, contents);
 	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_prefixes, NULL);
+
+	TAILQ_FOREACH(c, contents, list) {
+		printf("\tKey %s\n", c->key);
+	}
 	
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
