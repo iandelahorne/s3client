@@ -148,7 +148,7 @@ walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
 	int i;
 
 	size = (nodes) ? nodes->nodeNr : 0;
-	printf("size is %d nodes\n", size);
+	printf("prefix size is %d nodes\n", size);
 	for (i = 0; i < size ; i++) {
 		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
 			cur = nodes->nodeTab[i];
