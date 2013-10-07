@@ -83,7 +83,7 @@ parse_content(xmlNode *root) {
 			} else {
 				
 				printf("node type: Element, name: %s\n", node->name);
-				printf("node xmlsNodeGetContent: %s\n",value);
+				printf("node xmlNodeGetContent: %s\n",value);
 			}
 			xmlFree(value);
 		}
