@@ -9,9 +9,18 @@ Dependencies:
 * OpenSSL
 * libxml2 
 * libcurl
+* libbsd (on Linux)
  
 Currently it compiles on OSX and Linux.
-Amazon secret ID and key are defined in s3_secret.h
+
+Usage
+-----
+`./s3test <bucketname>` will list a bucket's root keys, keys under `/foo/bar`,
+upload `/foobar.txt` with contents from a char pointer, download the contents
+and then delete the file.
+
+Amazon secret ID and key are fetched from environment variables
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY`
 
 Todo
 ----
