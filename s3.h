@@ -30,6 +30,8 @@
 #endif
 
 #include <string.h>
+#include <sys/queue.h>
+#include "s3xml.h"
 
 #define S3_SECRET_LENGTH 128
 #define S3_ID_LENGTH 128
@@ -48,6 +50,16 @@ struct S3 {
 	char *proxy;
 };
 
+struct s3_bucket_entry {
+	char *key;
+	char *lastmod; /* time_t */
+	size_t size;
+	char *etag;
+	TAILQ_ENTRY(s3_bucket_entry) list;
+};
+
+TAILQ_HEAD(s3_bucket_entry_head, s3_bucket_entry);
+
 struct S3 * s3_init(const char *id, const char *secret, const char *base_url);
 void s3_free(struct S3 *s3);
 
@@ -60,12 +72,13 @@ void s3_string_free(struct s3_string *str);
 char * s3_hmac_sign(const char *key, const char *str, size_t len);
 char * s3_md5_sum(const char *content, size_t len);
 
-char * s3_make_date();
-
-void s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *sign_data, const char *date, struct s3_string *out, struct s3_string *in, const char *content_md5, const char *content_type);
-
 void s3_get(struct S3 *s3, const char *bucket, const char *key, struct s3_string *out);
 void s3_delete(struct S3 *s3, const char *bucket, const char *key);
 void s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_type, const char *data, size_t len);
+
+void s3_bucket_entry_free(struct s3_bucket_entry *entry);
+void s3_bucket_entries_free(struct s3_bucket_entry_head *entries);
+
+struct s3_bucket_entry_head * s3_list_bucket(struct S3 *s3, const char *bucket, const char *prefix);
 
 #endif /* _S3_H */

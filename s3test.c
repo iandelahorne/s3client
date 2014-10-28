@@ -23,7 +23,6 @@
  */
 
 #include "s3.h"
-#include "s3bucket.h"
 
 #ifdef LINUX
 #include <bsd/string.h>

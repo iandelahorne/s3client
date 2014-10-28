@@ -27,6 +27,7 @@
 #include <curl/curl.h>
 
 #include "s3.h"
+#include "s3internal.h"
 #include <stdio.h>
 
 struct S3 *

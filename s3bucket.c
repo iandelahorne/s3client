@@ -22,7 +22,9 @@
  * SOFTWARE.
  */
 
-#include "s3bucket.h"
+#include "s3.h"
+#include "s3internal.h"
+
 #ifdef LINUX
 #include <bsd/string.h>
 #endif
