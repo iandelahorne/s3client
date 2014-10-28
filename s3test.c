@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Ian Delahorne <ian.delahorne@gmail.com>
+ * Copyright (c) 2013,2014 Ian Delahorne <ian.delahorne@gmail.com>
  * 
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation files
@@ -23,8 +23,7 @@
  */
 
 #include "s3.h"
-#include "s3xml.h"
-#include "s3content.h"
+#include "s3bucket.h"
 
 #ifdef LINUX
 #include <bsd/string.h>
@@ -36,126 +35,15 @@
 
 #include <curl/curl.h>
 
-static void 
-walk_xpath_content_nodes(xmlNodeSetPtr nodes, void *data) {
-	struct s3_content_head *head;
-	xmlNodePtr cur;
-	int size;
-	int i;
-
-	head = (struct s3_content_head *) data;
-
-	size = (nodes) ? nodes->nodeNr : 0;
-#ifdef DEBUG
-	printf("size is %d nodes\n", size);
-#endif
-	for (i = 0; i < size ; i++) {
-		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
-			cur = nodes->nodeTab[i];
-			
-			struct s3_content *content = s3_parse_content(cur->children);
-			TAILQ_INSERT_TAIL(head, content, list);
-		}
-	}
-}
-
-#ifdef WALK_CONTENT_PREFIXES
-static void
-parse_prefixes(xmlNode *root) {
-	xmlNode *node = NULL;
-	for (node = root; node; node = node->next) {
-		if (node->type == XML_ELEMENT_NODE) {
-			xmlChar *value =  xmlNodeGetContent(node->children);
-			
-			printf("Prefix node type: Element, name: %s\n", node->name);
-			printf("Prefix node xmlsNodeGetContent: %s\n",value);
-			xmlFree(value);
-		}
-	}
-}
-
-static void
-walk_xpath_content_prefixes(xmlNodeSetPtr nodes, void *data) {
-	xmlNodePtr cur;
-	int size;
-	int i;
-
-	size = (nodes) ? nodes->nodeNr : 0;
-#ifdef DEBUG
-	printf("prefix size is %d nodes\n", size);
-#endif
-	for (i = 0; i < size ; i++) {
-		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
-			cur = nodes->nodeTab[i];
-			parse_prefixes(cur->children);
-		}
-	}
-}
-#endif
-
-static void
-s3_parse_bucket_response(char *str) {
-	struct s3_content_head *contents;
-	struct s3_content *c;
-	xmlDocPtr doc;
-
-	contents = malloc(sizeof (*contents));
-	TAILQ_INIT(contents);
-
-	doc = xmlReadMemory(str, strlen(str), "noname.xml", NULL, 0);
-
-	/* 
-	 * Since Amazon uses an XML Namespace, we need to declare it
-	 * and use it as a prefix in Xpath queries, even though it's
-	 * not written out in the tag names - libxml2 follows the
-	 * standard where others don't
-	 */
-	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_content_nodes, contents);
-#ifdef WALK_CONTENT_PREFIXES
-	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_content_prefixes, NULL);
-#endif
-	TAILQ_FOREACH(c, contents, list) {
-		printf("\tKey %s\n", c->key);
-	}
-	
-	s3_contents_free(contents);
-
-	xmlFreeDoc(doc);
-	xmlCleanupParser();
-}
-
-static void
-s3_list_bucket(struct S3 *s3, const char *bucket, const char *prefix) {
-	char *date;
-	char *sign_data;	
-	char *url;
-	struct s3_string *str;
-	const char *method = "GET";
-
-
-	str = s3_string_init();		
-	date = s3_make_date();
-
-	asprintf(&sign_data, "%s\n\n\n%s\n/%s/", method, date, bucket);	
-      	asprintf(&url, "http://%s.%s/?delimiter=/%s%s", bucket, s3->base_url, prefix ? "&prefix=" : "", prefix ? prefix : "");
-
-	s3_perform_op(s3, method, url, sign_data, date, str, NULL, NULL, NULL);
-
-	s3_parse_bucket_response(str->ptr);
-#ifdef DEBUG
-	printf("%s\n", str->ptr);
-#endif
-	s3_string_free(str);
-	free(url);
-	free(sign_data);
-	free(date);
-}
-
 
 
 int main (int argc, char **argv) {
 	struct S3 *s3; 
 	struct s3_string *out;
+	struct s3_bucket_entry_head *bkt_entries;
+	struct s3_bucket_entry *e;
+	char *file_contents = "foo bar gazonk";
+
 
 	char *s3_key_id = getenv("AWS_ACCESS_KEY_ID");
 	char *s3_secret = getenv("AWS_SECRET_KEY");
@@ -175,15 +63,22 @@ int main (int argc, char **argv) {
 	s3 = s3_init(s3_key_id, s3_secret, "s3.amazonaws.com");
 
 	printf("Listing bucket root\n");
-	s3_list_bucket(s3, bucket, NULL);
+	bkt_entries = s3_list_bucket(s3, bucket, NULL);
+	TAILQ_FOREACH(e, bkt_entries, list) {
+		printf("\tKey %s\n", e->key);
+	}
+	s3_bucket_entries_free(bkt_entries);
+
 
 	printf("Listing /foo/bar/\n");
-	s3_list_bucket(s3, bucket, "foo/bar/");
-
-	char *val = "foo bar gazonk";
+	bkt_entries = s3_list_bucket(s3, bucket, "foo/bar/");
+	TAILQ_FOREACH(e, bkt_entries, list) {
+		printf("\tKey %s\n", e->key);
+	}
+	s3_bucket_entries_free(bkt_entries);
 
 	printf("Uploading foo.txt\n");
-	s3_put(s3, bucket, "foo.txt", "text/plain", val, strlen(val));
+	s3_put(s3, bucket, "foo.txt", "text/plain", file_contents, strlen(file_contents));
 
 	printf("Downloading foo.txt\n");
 	out = s3_string_init();
