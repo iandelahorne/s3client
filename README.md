@@ -3,7 +3,8 @@ s3client
 
 C Implementation of an Amazon S3 client library. 
 
-Currently it's in "experimental" stage, will be refactored into a library later.
+Currently it's in "experimental" stage, will be refactored into a
+library later.
 
 Dependencies:
 * OpenSSL
@@ -16,7 +17,8 @@ Currently it compiles on OSX and Linux.
 
 Library usage
 ------------
-### `struct S3 * s3_init(char *key_id, char *secret, char *host)`
+### s3_init
+`struct S3 * s3_init(char *key_id, char *secret, char *host)`
 
 Call to initialize a `struct S3` pointer.
   Example:
@@ -24,10 +26,14 @@ Call to initialize a `struct S3` pointer.
 struct S3 *s3 = s3_init(aws_key_id, aws_secret, "s3.amazonaws.com");
 ```
 
-### `void s3_free(struct S3 *s3)`
+### s3_free
+
+`void s3_free(struct S3 *s3)`
 Frees the S3 context.
 
-### `struct s3_bucket_entries * s3_list_bucket(struct S3 *s3, char *bucket, char *prefix)`
+### s3_bucket_entries
+
+`struct s3_bucket_entries * s3_list_bucket(struct S3 *s3, char *bucket, char *prefix)`
 
 List keys in `bucket` with optional `prefix`. Passing NULL as prefix
 will list the top-level keys.
@@ -58,19 +64,24 @@ Example:
 	s3_bucket_entries_free(bkt_entries);
 ```
 
-### `void s3_bucket_entries_free(struct s3_bucket_entry_head *entries)`
+### s3_bucket_entries
+
+`void s3_bucket_entries_free(struct s3_bucket_entry_head *entries)`
 Iterates through all entries in `entries` and free. Free the `entries` pointer.
 
-### `struct s3_string * s3_string_init()`
+### s3_string_init
+`struct s3_string * s3_string_init()`
 Initializes a `struct s3_string` pointer, which later can be freed
 with `s3_string_free`.
 
 This can be later outputted using `printf("%.*s\n", (int)str->len, str->ptr)`
 
-### `void s3_string_free(struct s3_string *str)`
+### s3_string_free
+`void s3_string_free(struct s3_string *str)`
 Frees a `struct s3_string`.
 
-### `void s3_get(struct S3 *s3, char *bucket, char *key, struct s3_string *out)`
+### s3_get
+`void s3_get(struct S3 *s3, char *bucket, char *key, struct s3_string *out)`
 Download the contents of `key` in `bucket` into the string `out`.
 
 Example:
@@ -84,7 +95,8 @@ Example:
 	s3_string_free(out);
 ```
 
-### `void s3_put(struct S3 *s3, char *bucket, char *content_type, char *contents, size_t len)`
+### s3_put
+`void s3_put(struct S3 *s3, char *bucket, char *content_type, char *contents, size_t len)`
 
 Upload `len` bytes of `contents` into `key` in `bucket`.
 
@@ -95,7 +107,8 @@ Example:
 	s3_put(s3, bucket, "foo.txt", "text/plain", file_contents, strlen(file_contents));
 ```
 
-### `void s3_delete(struct S3 *s3, char *bucket, char *key)`
+### s3_delete
+`void s3_delete(struct S3 *s3, char *bucket, char *key)`
 Deletes `key` from `bucket`.
 
 Example:
