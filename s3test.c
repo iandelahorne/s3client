@@ -59,10 +59,23 @@ walk_xpath_content_nodes(xmlNodeSetPtr nodes, void *data) {
 	}
 }
 
+#ifdef WALK_CONTENT_PREFIXES
+static void
+parse_prefixes(xmlNode *root) {
+	xmlNode *node = NULL;
+	for (node = root; node; node = node->next) {
+		if (node->type == XML_ELEMENT_NODE) {
+			xmlChar *value =  xmlNodeGetContent(node->children);
+			
+			printf("Prefix node type: Element, name: %s\n", node->name);
+			printf("Prefix node xmlsNodeGetContent: %s\n",value);
+			xmlFree(value);
+		}
+	}
+}
 
-
-void 
-walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
+static void
+walk_xpath_content_prefixes(xmlNodeSetPtr nodes, void *data) {
 	xmlNodePtr cur;
 	int size;
 	int i;
@@ -97,9 +110,10 @@ s3_parse_bucket_response(char *str) {
 	 * not written out in the tag names - libxml2 follows the
 	 * standard where others don't
 	 */
-	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_nodes, contents);
-	/* s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_prefixes, NULL); */
-
+	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_content_nodes, contents);
+#ifdef WALK_CONTENT_PREFIXES
+	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_content_prefixes, NULL);
+#endif
 	TAILQ_FOREACH(c, contents, list) {
 		printf("\tKey %s\n", c->key);
 	}
