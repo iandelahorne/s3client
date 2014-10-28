@@ -1,3 +1,7 @@
+before_install: 
+    - sudo apt-get update -qq 
+    - sudo apt-get install -y libbsd-dev libcurl4-openssl-dev libxml2-dev
+
 script: make
 
 compiler:
