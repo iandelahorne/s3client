@@ -63,18 +63,22 @@ int main (int argc, char **argv) {
 
 	printf("Listing bucket root\n");
 	bkt_entries = s3_list_bucket(s3, bucket, NULL);
-	TAILQ_FOREACH(e, bkt_entries, list) {
-		printf("\tKey %s\n", e->key);
+	if (bkt_entries != NULL) {
+		TAILQ_FOREACH(e, bkt_entries, list) {
+			printf("\tKey %s\n", e->key);
+		}
+		s3_bucket_entries_free(bkt_entries);
 	}
-	s3_bucket_entries_free(bkt_entries);
 
 
 	printf("Listing /foo/bar/\n");
 	bkt_entries = s3_list_bucket(s3, bucket, "foo/bar/");
-	TAILQ_FOREACH(e, bkt_entries, list) {
-		printf("\tKey %s\n", e->key);
+	if (bkt_entries != NULL) {
+		TAILQ_FOREACH(e, bkt_entries, list) {
+			printf("\tKey %s\n", e->key);
+		}
+		s3_bucket_entries_free(bkt_entries);
 	}
-	s3_bucket_entries_free(bkt_entries);
 
 	printf("Uploading foo.txt\n");
 	s3_put(s3, bucket, "foo.txt", "text/plain", file_contents, strlen(file_contents));
