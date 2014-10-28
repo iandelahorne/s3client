@@ -58,7 +58,7 @@ s3_free(struct S3 *s3) {
 }
 
 char *
-s3_make_date() {
+s3_make_date(void) {
 	char *date;
 	time_t now;
 	struct tm tm;

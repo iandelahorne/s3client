@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "s3.h"
+#include "s3internal.h"
 
 size_t
 s3_string_curl_writefunc(void *ptr, size_t len, size_t nmemb, struct s3_string *s) {
@@ -55,7 +56,7 @@ s3_string_curl_readfunc(void *ptr, size_t len, size_t nmemb, struct s3_string *s
 }
 
 struct s3_string *
-s3_string_init() {
+s3_string_init(void) {
 	struct s3_string *s;
 	s = malloc(sizeof (struct s3_string));
 	s->len = 0;

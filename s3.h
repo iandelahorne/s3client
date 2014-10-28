@@ -63,8 +63,7 @@ TAILQ_HEAD(s3_bucket_entry_head, s3_bucket_entry);
 struct S3 * s3_init(const char *id, const char *secret, const char *base_url);
 void s3_free(struct S3 *s3);
 
-
-struct s3_string * s3_string_init();
+struct s3_string * s3_string_init(void);
 size_t s3_string_curl_writefunc(void *ptr, size_t len, size_t nmemb, struct s3_string *s);
 size_t s3_string_curl_readfunc(void *ptr, size_t len, size_t nmemb, struct s3_string *s);
 void s3_string_free(struct s3_string *str);
