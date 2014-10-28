@@ -78,9 +78,10 @@ parse_content(xmlNode *root) {
 				content->etag = malloc(len + 2);
 				strlcpy(content->etag, (const char *)value, len + 1);
 			} else {
-				
+#ifdef DEBUG
 				printf("node type: Element, name: %s\n", node->name);
 				printf("node xmlNodeGetContent: %s\n",value);
+#endif
 			}
 			xmlFree(value);
 		}
@@ -94,7 +95,6 @@ parse_prefixes(xmlNode *root) {
 	for (node = root; node; node = node->next) {
 		if (node->type == XML_ELEMENT_NODE) {
 			xmlChar *value =  xmlNodeGetContent(node->children);
-			/* size_t len = strlen((const char *) value); */
 			
 			printf("Prefix node type: Element, name: %s\n", node->name);
 			printf("Prefix node xmlsNodeGetContent: %s\n",value);
@@ -113,7 +113,9 @@ walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
 	head = (struct s3_content_head *) data;
 
 	size = (nodes) ? nodes->nodeNr : 0;
+#ifdef DEBUG
 	printf("size is %d nodes\n", size);
+#endif
 	for (i = 0; i < size ; i++) {
 		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
 			cur = nodes->nodeTab[i];
@@ -133,7 +135,9 @@ walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
 	int i;
 
 	size = (nodes) ? nodes->nodeNr : 0;
+#ifdef DEBUG
 	printf("prefix size is %d nodes\n", size);
+#endif
 	for (i = 0; i < size ; i++) {
 		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
 			cur = nodes->nodeTab[i];
