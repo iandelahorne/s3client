@@ -22,8 +22,10 @@
  * SOFTWARE.  
  */
 
+#include "s3.h"
+#include "s3xml.h"
+
 #ifdef LINUX
-#define _GNU_SOURCE
 #include <bsd/string.h>
 #endif
 
@@ -32,11 +34,6 @@
 #include <sys/queue.h>
 
 #include <curl/curl.h>
-
-
-#include "s3.h"
-#include "s3xml.h"
-#include "s3_secret.h"
 
 
 struct s3_content {
