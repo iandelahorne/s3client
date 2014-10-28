@@ -18,6 +18,7 @@ Currently it compiles on OSX and Linux.
 Library usage
 ------------
 ### s3_init
+
 `struct S3 * s3_init(char *key_id, char *secret, char *host)`
 
 Call to initialize a `struct S3` pointer.
@@ -67,21 +68,28 @@ Example:
 ### s3_bucket_entries
 
 `void s3_bucket_entries_free(struct s3_bucket_entry_head *entries)`
+
 Iterates through all entries in `entries` and free. Free the `entries` pointer.
 
 ### s3_string_init
+
 `struct s3_string * s3_string_init()`
+
 Initializes a `struct s3_string` pointer, which later can be freed
 with `s3_string_free`.
 
 This can be later outputted using `printf("%.*s\n", (int)str->len, str->ptr)`
 
 ### s3_string_free
+
 `void s3_string_free(struct s3_string *str)`
+
 Frees a `struct s3_string`.
 
 ### s3_get
+
 `void s3_get(struct S3 *s3, char *bucket, char *key, struct s3_string *out)`
+
 Download the contents of `key` in `bucket` into the string `out`.
 
 Example:
@@ -96,6 +104,7 @@ Example:
 ```
 
 ### s3_put
+
 `void s3_put(struct S3 *s3, char *bucket, char *content_type, char *contents, size_t len)`
 
 Upload `len` bytes of `contents` into `key` in `bucket`.
@@ -108,7 +117,9 @@ Example:
 ```
 
 ### s3_delete
+
 `void s3_delete(struct S3 *s3, char *bucket, char *key)`
+
 Deletes `key` from `bucket`.
 
 Example:
@@ -116,6 +127,7 @@ Example:
 ```
 	s3_delete(s3, bucket, "foo.txt");
 ```
+
 s3test usage
 -----------
 `./s3test <bucketname>` will list a bucket's root keys, keys under `/foo/bar`,
