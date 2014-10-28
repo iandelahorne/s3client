@@ -24,6 +24,7 @@
 
 #include "s3.h"
 #include "s3xml.h"
+#include "s3content.h"
 
 #ifdef LINUX
 #include <bsd/string.h>
@@ -35,76 +36,8 @@
 
 #include <curl/curl.h>
 
-
-struct s3_content {
-	char *key;
-	char *lastmod; /* time_t */
-	size_t size;
-	char *etag;
-	TAILQ_ENTRY(s3_content) list;
-};
-
-TAILQ_HEAD(s3_content_head, s3_content);
-
 static void 
-s3_content_free(struct s3_content *content) {
-	if (content->key)
-		free(content->key);
-	if (content->lastmod)
-		free(content->lastmod);
-	if (content->etag)
-		free(content->etag);
-
-	free(content);
-}
-
-
-struct s3_content *
-parse_content(xmlNode *root) {
-	struct s3_content *content = malloc(sizeof(struct s3_content));
-	xmlNode *node = NULL;
-	for (node = root; node; node = node->next) {
-		if (node->type == XML_ELEMENT_NODE) {
-			xmlChar *value =  xmlNodeGetContent(node->children);
-			size_t len = strlen((const char *) value);
-
-			if (strcasecmp("key", (const char *)node->name) == 0) {
-				content->key = malloc(len + 2);
-				strlcpy(content->key, (const char *)value, len + 1);
-			} else if (strcasecmp("lastmodified", (const char *)node->name) == 0) {
-				content->lastmod = malloc(len + 2);
-				strlcpy(content->lastmod, (const char *)value, len + 1);
-			} else if (strcasecmp("etag", (const char *)node->name) == 0) {
-				content->etag = malloc(len + 2);
-				strlcpy(content->etag, (const char *)value, len + 1);
-			} else {
-#ifdef DEBUG
-				printf("node type: Element, name: %s\n", node->name);
-				printf("node xmlNodeGetContent: %s\n",value);
-#endif
-			}
-			xmlFree(value);
-		}
-	}
-	return content;
-	
-}
-void
-parse_prefixes(xmlNode *root) {
-	xmlNode *node = NULL;
-	for (node = root; node; node = node->next) {
-		if (node->type == XML_ELEMENT_NODE) {
-			xmlChar *value =  xmlNodeGetContent(node->children);
-			
-			printf("Prefix node type: Element, name: %s\n", node->name);
-			printf("Prefix node xmlsNodeGetContent: %s\n",value);
-			xmlFree(value);
-		}
-	}
-}
-
-void 
-walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
+walk_xpath_content_nodes(xmlNodeSetPtr nodes, void *data) {
 	struct s3_content_head *head;
 	xmlNodePtr cur;
 	int size;
@@ -120,7 +53,7 @@ walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
 		if (nodes->nodeTab[i]->type == XML_ELEMENT_NODE) {
 			cur = nodes->nodeTab[i];
 			
-			struct s3_content *content = parse_content(cur->children);
+			struct s3_content *content = s3_parse_content(cur->children);
 			TAILQ_INSERT_TAIL(head, content, list);
 		}
 	}
@@ -145,20 +78,10 @@ walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
 		}
 	}
 }
+#endif
 
 static void
-s3_contents_free(struct s3_content_head *contents) {
-	struct s3_content *c;
-
-	while ((c = TAILQ_FIRST(contents)) != NULL) {
-		TAILQ_REMOVE(contents, c, list);
-		s3_content_free(c);
-	}
-	free(contents);
-}
-
-void 
-s3_parse_response(char *str) {
+s3_parse_bucket_response(char *str) {
 	struct s3_content_head *contents;
 	struct s3_content *c;
 	xmlDocPtr doc;
@@ -204,7 +127,7 @@ s3_list_bucket(struct S3 *s3, const char *bucket, const char *prefix) {
 
 	s3_perform_op(s3, method, url, sign_data, date, str, NULL, NULL, NULL);
 
-	s3_parse_response(str->ptr);
+	s3_parse_bucket_response(str->ptr);
 #ifdef DEBUG
 	printf("%s\n", str->ptr);
 #endif
@@ -239,10 +162,12 @@ int main (int argc, char **argv) {
 
 	printf("Listing bucket root\n");
 	s3_list_bucket(s3, bucket, NULL);
+
 	printf("Listing /foo/bar/\n");
 	s3_list_bucket(s3, bucket, "foo/bar/");
 
 	char *val = "foo bar gazonk";
+
 	printf("Uploading foo.txt\n");
 	s3_put(s3, bucket, "foo.txt", "text/plain", val, strlen(val));
 
@@ -251,6 +176,7 @@ int main (int argc, char **argv) {
 	s3_get(s3, bucket, "foo.txt", out);
 
 	printf("Contents:\n%.*s\n", (int)out->len, out->ptr);
+
 	s3_string_free(out);
 
 	printf("Deleting foo.txt\n");
