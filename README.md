@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/lflux/s3client.svg?branch=master)](https://travis-ci.org/lflux/s3client)
+
 s3client
 ========
 
