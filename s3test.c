@@ -102,18 +102,6 @@ parse_prefixes(xmlNode *root) {
 		}
 	}
 }
-/* 
-void
-libxml_walk_nodes(xmlNode *root) {
-	xmlNode *node = NULL;
-	for (node = root; node; node = node->next) {
-		if (node->type == XML_ELEMENT_NODE) {
-			printf("node type: Element, name: %s\n", node->name);
-		}
-		libxml_walk_nodes(node->children);
-	}
-}
-*/
 
 void 
 walk_xpath_nodes(xmlNodeSetPtr nodes, void *data) {
