@@ -25,6 +25,10 @@
 #ifndef _S3_H
 #define _S3_H
 
+#ifdef LINUX
+#include <bsd/string.h>
+#endif
+
 #include <string.h>
 
 #define S3_SECRET_LENGTH 128
