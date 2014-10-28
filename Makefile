@@ -12,4 +12,4 @@ valgrind: s3test
 	valgrind --leak-check=full ./s3test
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) s3test
