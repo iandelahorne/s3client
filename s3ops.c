@@ -27,6 +27,7 @@
 #include <curl/curl.h>
 
 #include "s3.h"
+#include <stdio.h>
 
 struct S3 *
 s3_init(const char *id, const char *secret, const char *base_url) {
@@ -81,11 +82,11 @@ s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *si
 
 
 
-	fprintf(stderr, "data to sign:%s\n", sign_data);
-
 	digest = s3_hmac_sign(s3->secret, sign_data, strlen(sign_data));
-	/* fprintf(stderr, "Authentication: AWS %s:%s\n", s3->id, digest); */
-	
+#ifdef DEBUG
+	fprintf(stderr, "DEBUG: data to sign:%s\n", sign_data);
+	fprintf(stderr, "DEBUG: Authentication: AWS %s:%s\n", s3->id, digest);
+#endif
 	curl = curl_easy_init();
 	
 	hdr = malloc(1024);
@@ -116,19 +117,19 @@ s3_perform_op(struct S3 *s3, const char *method, const char *url, const char *si
 	headers = curl_slist_append(headers, hdr);
 	free(hdr);
 	
-	
+#ifdef DEBUG
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-/*	curl_easy_setopt(curl, CURLOPT_HEADER, 1); */
+	curl_easy_setopt(curl, CURLOPT_HEADER, 1);
+#endif
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-	/* http://stackoverflow.com/questions/2329571/c-libcurl-get-output-into-a-string */
 
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, s3_string_curl_writefunc);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, out);
 
 	curl_easy_setopt(curl, CURLOPT_URL, url);
+
 	if (s3->proxy) {
 		curl_easy_setopt(curl, CURLOPT_PROXY, s3->proxy);
 	}
@@ -203,20 +204,13 @@ s3_put(struct S3 *s3, const char *bucket, const char *key, const char *content_t
 
 	md5 = s3_md5_sum(data, len);
 
-	/* printf("md5 is %s\n", content_md5); */
 	date = s3_make_date();
-	/* asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, content_md5 ?  content_md5 : "", content_type ? content_type : "", date, bucket, key);  */
 	asprintf(&sign_data, "%s\n%s\n%s\n%s\n/%s/%s", method, md5, content_type ? content_type : "", date, bucket, key);  
 
 
 	asprintf(&url, "http://%s.%s/%s", bucket, s3->base_url, key);
 
-	/* s3_perform_upload(s3, url, sign_data, date, content_md5, content_type, in, out);*/
 	s3_perform_op(s3, method, url, sign_data, date, out, in, md5, content_type);
-	printf("url %s\n", url);
-	printf("data to sign %s\n", sign_data);
-	printf("\n%s\n", out->ptr);
-
 	s3_string_free(in);
 	s3_string_free(out);
 
