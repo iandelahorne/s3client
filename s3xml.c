@@ -80,6 +80,7 @@ s3_execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, void (*nod
 	xpath_ctx = xmlXPathNewContext(doc);
 	if (xpath_ctx == NULL) {
 		fprintf(stderr,"Error: unable to create new XPath context\n");
+		return;
 	}
 
 	s3_register_namespaces(xpath_ctx, ns_list);
@@ -87,10 +88,11 @@ s3_execute_xpath_expr(const xmlDocPtr doc, const xmlChar *xpath_expr, void (*nod
 	xpath_obj = xmlXPathEvalExpression(xpath_expr, xpath_ctx);
 	if(xpath_obj == NULL) {
 		fprintf(stderr,"Error: unable to evaluate xpath expression \"%s\"\n", xpath_expr);
+	} else {
+
+		nodeset_cb(xpath_obj->nodesetval, cb_data);
+		xmlXPathFreeObject(xpath_obj);
 	}
 
-	nodeset_cb(xpath_obj->nodesetval, cb_data);
-
-	xmlXPathFreeObject(xpath_obj);
 	xmlXPathFreeContext(xpath_ctx); 
 }
