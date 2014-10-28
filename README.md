@@ -84,8 +84,7 @@ Example:
 	s3_string_free(out);
 ```
 
-### `void s3_put(struct S3 *s3, char *bucket, char *content_type, char
-    *contents, size_t len)`
+### `void s3_put(struct S3 *s3, char *bucket, char *content_type, char *contents, size_t len)`
 
 Upload `len` bytes of `contents` into `key` in `bucket`.
 
