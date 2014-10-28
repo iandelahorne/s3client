@@ -146,8 +146,19 @@ walk_xpath_prefixes(xmlNodeSetPtr nodes, void *data) {
 	}
 }
 
+static void
+s3_contents_free(struct s3_content_head *contents) {
+	struct s3_content *c;
+
+	while ((c = TAILQ_FIRST(contents)) != NULL) {
+		TAILQ_REMOVE(contents, c, list);
+		s3_content_free(c);
+	}
+	free(contents);
+}
+
 void 
-libxml_do_stuff(char *str) {
+s3_parse_response(char *str) {
 	struct s3_content_head *contents;
 	struct s3_content *c;
 	xmlDocPtr doc;
@@ -164,12 +175,14 @@ libxml_do_stuff(char *str) {
 	 * standard where others don't
 	 */
 	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:Contents", walk_xpath_nodes, contents);
-	s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_prefixes, NULL);
+	/* s3_execute_xpath_expr(doc, (const xmlChar *)"//amzn:CommonPrefixes", walk_xpath_prefixes, NULL); */
 
 	TAILQ_FOREACH(c, contents, list) {
 		printf("\tKey %s\n", c->key);
 	}
 	
+	s3_contents_free(contents);
+
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
 }
@@ -191,9 +204,10 @@ s3_list_bucket(struct S3 *s3, const char *bucket, const char *prefix) {
 
 	s3_perform_op(s3, method, url, sign_data, date, str, NULL, NULL, NULL);
 
-	libxml_do_stuff(str->ptr);	
+	s3_parse_response(str->ptr);
+#ifdef DEBUG
 	printf("%s\n", str->ptr);
-
+#endif
 	s3_string_free(str);
 	free(url);
 	free(sign_data);
@@ -205,22 +219,43 @@ s3_list_bucket(struct S3 *s3, const char *bucket, const char *prefix) {
 int main (int argc, char **argv) {
 	struct S3 *s3; 
 	struct s3_string *out;
-	
-	s3 = s3_init(S3_KEY, S3_SECRET, "s3.amazonaws.com");
-	const char *bucket = S3_BUCKET;
-	
+
+	char *s3_key_id = getenv("AWS_ACCESS_KEY_ID");
+	char *s3_secret = getenv("AWS_SECRET_KEY");
+
+	if (argc < 2) {
+		fprintf(stderr, "Usage: s3test <bucket>\n");
+		return 1;
+	}	
+
+	if (s3_key_id == NULL || s3_secret == NULL) {
+		fprintf(stderr, "Error: Environment variable AWS_ACCESS_KEY_ID or AWS_SECRET_KEY not set\n");
+		return 1;
+	}
+
+	char *bucket = argv[1];
+
+	s3 = s3_init(s3_key_id, s3_secret, "s3.amazonaws.com");
+
+	printf("Listing bucket root\n");
 	s3_list_bucket(s3, bucket, NULL);
+	printf("Listing /foo/bar/\n");
 	s3_list_bucket(s3, bucket, "foo/bar/");
-	
-	out = s3_string_init();
-	s3_get(s3, bucket, "Towel-Dog.jpg", out);
-	s3_string_free(out);
-       
+
 	char *val = "foo bar gazonk";
-	s3_put(s3, bucket, "trattmule.txt", "text/plain", val, strlen(val));
-	
-	s3_delete(s3, bucket, "trattmule.txt");
+	printf("Uploading foo.txt\n");
+	s3_put(s3, bucket, "foo.txt", "text/plain", val, strlen(val));
+
+	printf("Downloading foo.txt\n");
+	out = s3_string_init();
+	s3_get(s3, bucket, "foo.txt", out);
+
+	printf("Contents:\n%.*s\n", (int)out->len, out->ptr);
+	s3_string_free(out);
+
+	printf("Deleting foo.txt\n");
+	s3_delete(s3, bucket, "foo.txt");
 	s3_free(s3);
-	
+
 	return 0;
 }
